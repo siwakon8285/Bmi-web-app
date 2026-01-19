@@ -25,9 +25,14 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col`}
       >
-        {children}
+        <div className="flex-grow">
+          {children}
+        </div>
+        <footer className="w-full py-4 text-center text-gray-500 text-sm bg-white/50 backdrop-blur-sm border-t border-gray-200">
+          <p>67162110310-5</p>
+        </footer>
       </body>
     </html>
   );
