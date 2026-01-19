@@ -46,28 +46,3 @@ export async function getSession() {
   if (!session) return null;
   return await decrypt(session);
 }
-
-export async function updateSession(request: NextRequest) {
-  const session = request.cookies.get('session')?.value;
-  if (!session) return null;
-
-  const parsed = await decrypt(session);
-  
-  if (!parsed) {
-    // If session is invalid, clear it
-    const res = NextResponse.next();
-    res.cookies.delete('session');
-    return res;
-  }
-
-  // Refresh the session so it doesn't expire
-  parsed.expires = new Date(Date.now() + 24 * 60 * 60 * 1000);
-  const res = NextResponse.next();
-  res.cookies.set({
-    name: 'session',
-    value: await encrypt(parsed),
-    httpOnly: true,
-    expires: parsed.expires,
-  });
-  return res;
-}
