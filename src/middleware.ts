@@ -29,6 +29,8 @@ export async function middleware(request: NextRequest) {
   }
 
   // 3. Update session expiration if session is valid
+  // Temporarily disabled to prevent potential race conditions or loops
+  /*
   if (parsed) {
     const response = NextResponse.next();
     parsed.expires = new Date(Date.now() + 24 * 60 * 60 * 1000);
@@ -40,6 +42,7 @@ export async function middleware(request: NextRequest) {
     });
     return response;
   }
+  */
 
   return NextResponse.next();
 }

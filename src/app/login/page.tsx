@@ -22,8 +22,8 @@ export default function LoginPage() {
       });
 
       if (res.ok) {
-        router.push('/dashboard');
-        router.refresh(); // Refresh to update middleware state
+        // Force a hard navigation to ensure all state is fresh and avoid router cache issues
+        window.location.href = '/dashboard';
       } else {
         const data = await res.json();
         setError(data.message || 'Login failed');
