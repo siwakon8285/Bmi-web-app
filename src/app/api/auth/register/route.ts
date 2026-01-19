@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import db from '@/lib/db';
+import sql from '@/lib/db';
 import bcrypt from 'bcrypt';
 
 export async function POST(request: NextRequest) {
@@ -12,8 +12,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user exists
-    const existingUser = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
-    if (existingUser) {
+    const { rows } = await sql`SELECT * FROM users WHERE username = ${username}`;
+    if (rows.length > 0) {
       return NextResponse.json({ message: 'Username already taken' }, { status: 409 });
     }
 
@@ -21,9 +21,16 @@ export async function POST(request: NextRequest) {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Insert user
-    const result = db.prepare('INSERT INTO users (username, password_hash) VALUES (?, ?)').run(username, hashedPassword);
+    // Postgres uses RETURNING id to get the inserted ID, unlike SQLite's lastInsertRowid
+    const result = await sql`
+      INSERT INTO users (username, password_hash) 
+      VALUES (${username}, ${hashedPassword}) 
+      RETURNING id
+    `;
+    
+    const userId = result.rows[0].id;
 
-    return NextResponse.json({ message: 'User registered successfully', userId: result.lastInsertRowid }, { status: 201 });
+    return NextResponse.json({ message: 'User registered successfully', userId }, { status: 201 });
 
   } catch (error) {
     console.error('Registration error:', error);

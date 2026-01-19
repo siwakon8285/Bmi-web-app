@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import db from '@/lib/db';
+import sql from '@/lib/db';
 import { getSession } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
@@ -15,58 +15,92 @@ export async function GET(request: NextRequest) {
     const period = searchParams.get('period') || 'monthly'; // daily, weekly, monthly, yearly
 
     // 1. Key Metrics
-    const totalUsers = db.prepare('SELECT COUNT(*) as count FROM users WHERE role != "admin"').get() as any;
-    const avgBMI = db.prepare('SELECT AVG(bmi_value) as avg FROM bmi_records').get() as any;
+    const { rows: totalUsersRows } = await sql`SELECT COUNT(*) as count FROM users WHERE role != 'admin'`;
+    const { rows: avgBMIRows } = await sql`SELECT AVG(bmi_value) as avg FROM bmi_records`;
     
     // Obesity Rate (BMI >= 30)
-    const totalRecords = db.prepare('SELECT COUNT(*) as count FROM bmi_records').get() as any;
-    const obeseRecords = db.prepare('SELECT COUNT(*) as count FROM bmi_records WHERE bmi_value >= 30').get() as any;
-    const obesityRate = totalRecords.count > 0 ? (obeseRecords.count / totalRecords.count) * 100 : 0;
+    const { rows: totalRecordsRows } = await sql`SELECT COUNT(*) as count FROM bmi_records`;
+    const { rows: obeseRecordsRows } = await sql`SELECT COUNT(*) as count FROM bmi_records WHERE bmi_value >= 30`;
+    
+    const totalRecordsCount = parseInt(totalRecordsRows[0].count);
+    const obeseRecordsCount = parseInt(obeseRecordsRows[0].count);
+    const obesityRate = totalRecordsCount > 0 ? (obeseRecordsCount / totalRecordsCount) * 100 : 0;
 
     // 2. BMI Distribution (for Doughnut Chart)
-    const distribution = {
-      underweight: db.prepare('SELECT COUNT(*) as count FROM bmi_records WHERE bmi_value < 18.5').get() as any,
-      normal: db.prepare('SELECT COUNT(*) as count FROM bmi_records WHERE bmi_value >= 18.5 AND bmi_value < 25').get() as any,
-      overweight: db.prepare('SELECT COUNT(*) as count FROM bmi_records WHERE bmi_value >= 25 AND bmi_value < 30').get() as any,
-      obese: db.prepare('SELECT COUNT(*) as count FROM bmi_records WHERE bmi_value >= 30').get() as any,
-    };
+    const { rows: underweightRows } = await sql`SELECT COUNT(*) as count FROM bmi_records WHERE bmi_value < 18.5`;
+    const { rows: normalRows } = await sql`SELECT COUNT(*) as count FROM bmi_records WHERE bmi_value >= 18.5 AND bmi_value < 25`;
+    const { rows: overweightRows } = await sql`SELECT COUNT(*) as count FROM bmi_records WHERE bmi_value >= 25 AND bmi_value < 30`;
+    const { rows: obeseRows } = await sql`SELECT COUNT(*) as count FROM bmi_records WHERE bmi_value >= 30`;
 
-    // 3. Trend Analysis (for Line Chart) - Simplified logic based on period
-    // In a real app, we'd use complex SQL date grouping (strftime in SQLite)
-    let dateFormat = '%Y-%m-%d'; // default daily
+    // 3. Trend Analysis (for Line Chart)
+    // Postgres uses TO_CHAR for date formatting instead of strftime
+    let dateFormat = 'YYYY-MM-DD'; // default daily
     let limit = 30;
 
     if (period === 'weekly') {
-      dateFormat = '%Y-%W';
+      dateFormat = 'YYYY-IW'; // ISO week
       limit = 12;
     } else if (period === 'monthly') {
-      dateFormat = '%Y-%m';
+      dateFormat = 'YYYY-MM';
       limit = 12;
     } else if (period === 'yearly') {
-      dateFormat = '%Y';
+      dateFormat = 'YYYY';
       limit = 5;
     }
 
-    const trendQuery = `
-      SELECT strftime('${dateFormat}', created_at) as date_label, AVG(bmi_value) as avg_bmi 
-      FROM bmi_records 
-      GROUP BY date_label 
-      ORDER BY date_label ASC 
-      LIMIT ?
-    `;
-    const trends = db.prepare(trendQuery).all(limit);
+    // We can't use template literals for the format string inside TO_CHAR easily with sql`` tagging in a dynamic way if we want to be safe, 
+    // but here we control the dateFormat variable strictly.
+    // However, vercel/postgres template literal requires values to be parameters.
+    // We can just construct the query carefully or use conditional logic.
+    
+    let trendQuery;
+    if (period === 'weekly') {
+        trendQuery = await sql`
+            SELECT TO_CHAR(created_at, 'YYYY-IW') as date_label, AVG(bmi_value) as avg_bmi 
+            FROM bmi_records 
+            GROUP BY date_label 
+            ORDER BY date_label ASC 
+            LIMIT ${limit}
+        `;
+    } else if (period === 'monthly') {
+        trendQuery = await sql`
+            SELECT TO_CHAR(created_at, 'YYYY-MM') as date_label, AVG(bmi_value) as avg_bmi 
+            FROM bmi_records 
+            GROUP BY date_label 
+            ORDER BY date_label ASC 
+            LIMIT ${limit}
+        `;
+    } else if (period === 'yearly') {
+        trendQuery = await sql`
+            SELECT TO_CHAR(created_at, 'YYYY') as date_label, AVG(bmi_value) as avg_bmi 
+            FROM bmi_records 
+            GROUP BY date_label 
+            ORDER BY date_label ASC 
+            LIMIT ${limit}
+        `;
+    } else {
+        trendQuery = await sql`
+            SELECT TO_CHAR(created_at, 'YYYY-MM-DD') as date_label, AVG(bmi_value) as avg_bmi 
+            FROM bmi_records 
+            GROUP BY date_label 
+            ORDER BY date_label ASC 
+            LIMIT ${limit}
+        `;
+    }
+
+    const trends = trendQuery.rows;
 
     return NextResponse.json({
       metrics: {
-        totalUsers: totalUsers.count,
-        avgBMI: avgBMI.avg ? avgBMI.avg.toFixed(2) : 0,
+        totalUsers: parseInt(totalUsersRows[0].count),
+        avgBMI: avgBMIRows[0].avg ? parseFloat(avgBMIRows[0].avg).toFixed(2) : 0,
         obesityRate: obesityRate.toFixed(1),
       },
       distribution: [
-        distribution.underweight.count,
-        distribution.normal.count,
-        distribution.overweight.count,
-        distribution.obese.count,
+        parseInt(underweightRows[0].count),
+        parseInt(normalRows[0].count),
+        parseInt(overweightRows[0].count),
+        parseInt(obeseRows[0].count),
       ],
       trends,
     });

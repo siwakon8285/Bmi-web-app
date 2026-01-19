@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import db from '@/lib/db';
+import sql from '@/lib/db';
 import bcrypt from 'bcrypt';
 import { encrypt } from '@/lib/auth';
 
@@ -12,7 +12,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'Username and password are required' }, { status: 400 });
     }
 
-    const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username) as any;
+    const { rows } = await sql`SELECT * FROM users WHERE username = ${username}`;
+    const user = rows[0];
 
     if (!user) {
       return NextResponse.json({ message: 'Invalid credentials' }, { status: 401 });
