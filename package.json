@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:ui": "playwright test tests/ui-login-weight.spec.ts --ui",
+    "test:debug": "playwright test tests/ui-login-weight.spec.ts --debug",
+    "test:headed": "playwright test tests/ui-login-weight.spec.ts --headed",
+    "test:local": "playwright test --config playwright.local.config.ts --headed"
   },
   "dependencies": {
     "@vercel/postgres": "^0.10.0",
@@ -19,6 +23,7 @@
     "react-dom": "19.2.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.57.0",
     "@tailwindcss/postcss": "^4",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",

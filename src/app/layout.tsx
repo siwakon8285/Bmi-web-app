@@ -32,6 +32,9 @@ export default function RootLayout({
         </div>
         <footer className="w-full py-4 text-center text-gray-500 text-sm bg-white/50 backdrop-blur-sm border-t border-gray-200">
           <p>67162110310-5</p>
+          <p className="mt-1 text-xs text-gray-400">
+            Demo Credentials - Username: <span className="font-mono font-medium text-gray-600">siwakon</span> | Password: <span className="font-mono font-medium text-gray-600">Siwakon8!</span>
+          </p>
         </footer>
       </body>
     </html>

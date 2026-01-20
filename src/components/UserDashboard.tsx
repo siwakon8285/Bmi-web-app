@@ -62,8 +62,9 @@ export default function UserDashboard({ user }: { user: any }) {
           <h2 className="text-xl font-bold mb-4 text-gray-800">New Measurement</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Weight (kg)</label>
+              <label className="block text-sm font-medium text-gray-700" htmlFor="weight">Weight (kg)</label>
               <input
+                id="weight"
                 type="number"
                 step="0.1"
                 value={weight}
@@ -73,8 +74,9 @@ export default function UserDashboard({ user }: { user: any }) {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Height (cm)</label>
+              <label className="block text-sm font-medium text-gray-700" htmlFor="height">Height (cm)</label>
               <input
+                id="height"
                 type="number"
                 step="0.1"
                 value={height}
