@@ -34,17 +34,13 @@ export async function GET(request: NextRequest) {
 
     // 3. Trend Analysis (for Line Chart)
     // Postgres uses TO_CHAR for date formatting instead of strftime
-    let dateFormat = 'YYYY-MM-DD'; // default daily
     let limit = 30;
 
     if (period === 'weekly') {
-      dateFormat = 'YYYY-IW'; // ISO week
       limit = 12;
     } else if (period === 'monthly') {
-      dateFormat = 'YYYY-MM';
       limit = 12;
     } else if (period === 'yearly') {
-      dateFormat = 'YYYY';
       limit = 5;
     }
 
@@ -103,10 +99,10 @@ export async function GET(request: NextRequest) {
         parseInt(obeseRows[0].count),
       ],
       trends,
-    });
+    }, { status: 200 });
 
   } catch (error) {
-    console.error('MIS API Error:', error);
+    console.error('MIS Error:', error);
     return NextResponse.json({ message: 'Internal server error' }, { status: 500 });
   }
 }
